@@ -1,0 +1,40 @@
+# Publishes server.json to the official MCP Registry (registry.modelcontextprotocol.io)
+# as io.github.Keith-CY/meshmend-mcp, signed in with GitHub OIDC: no secrets needed.
+#
+# Order for a new version: bump the version (package.json, manifest.json, server.json),
+# `npm run pack:mcpb`, put the printed sha256 in server.json, commit, then create the
+# GitHub release v<version> with build/meshmend-mcp-<version>.mcpb attached. Publishing
+# the release runs this workflow; it checks the asset's sha256 against server.json first.
+name: publish-mcp
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: The release asset matches server.json
+        run: |
+          url=$(jq -r '.packages[0].identifier' server.json)
+          want=$(jq -r '.packages[0].fileSha256' server.json)
+          curl -sSfL "$url" -o bundle.mcpb
+          got=$(sha256sum bundle.mcpb | cut -d' ' -f1)
+          echo "asset $got"; echo "server.json $want"
+          test "$got" = "$want"
+      - name: Install mcp-publisher
+        run: |
+          curl -sSfL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      - name: Sign in to the MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish
+        run: ./mcp-publisher publish server.json

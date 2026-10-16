@@ -23,7 +23,7 @@
       "registryType": "mcpb",
       "identifier": "https://github.com/Keith-CY/meshmend-mcp/releases/download/v0.1.0/meshmend-mcp-0.1.0.mcpb",
       "version": "0.1.0",
-      "fileSha256": "e30f83cccfb15ddded841cd717f2de72d9dd929754d53eddd5098b4ebcbf6c2f",
+      "fileSha256": "cd047de0ed5769523886f31a639d2ba8a231b8391f75483d4a3b7a75ccd86faf",
       "transport": {
         "type": "stdio"
       }

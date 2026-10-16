@@ -124,7 +124,7 @@ export function createServer() {
         nextStep: z.string(),
         warnings: z.array(z.string()),
       },
-      annotations: { title: 'Repair an STL or 3MF mesh', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { title: 'Repair an STL or 3MF mesh', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     (args) => run(() => repairMesh(args)),
   );
@@ -139,7 +139,7 @@ export function createServer() {
         'Never overwrites the 3MF. Runs locally; nothing is uploaded.',
       inputSchema: { path: pathArg.describe('Path of the .3mf file on this computer (absolute is safest).'), output_path: outputArg, item: itemArg, overwrite: overwriteArg },
       outputSchema: { file, output, report, nextStep: z.string(), warnings: z.array(z.string()) },
-      annotations: { title: 'Convert 3MF to STL', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: { title: 'Convert 3MF to STL', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     (args) => run(() => convert3mf(args)),
   );
