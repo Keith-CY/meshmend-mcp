@@ -1,0 +1,28 @@
+import { describe,test,expect } from 'bun:test';
+import { analyze,repair,parseSTL,exportSTL,checkedExportSTL,demoMesh,MAX_BYTES } from '../src/core/mesh';
+export const tetra=new Float64Array([0,0,0,0,10,0,10,0,0, 0,0,0,10,0,0,0,0,10, 0,0,0,0,0,10,0,10,0, 10,0,0,0,10,0,0,0,10]);
+describe('STL and mesh contracts',()=>{
+ test('closed tetrahedron has four faces, no boundary or winding errors',()=>{const r=analyze(tetra);expect(r.triangles).toBe(4);expect(r.vertices).toBe(4);expect(r.closedTopology).toBe(true);expect(r.dimensions).toEqual([10,10,10]);expect(r.inwardShells).toBe(0);});
+ test('binary export reimports with identical geometry',()=>{const buffer=exportSTL(tetra);expect(buffer.byteLength).toBe(284);expect([...parseSTL(buffer)]).toEqual([...tetra]);});
+ test('binary STL with a solid header is still binary',()=>{const b=exportSTL(tetra);new Uint8Array(b).set(new TextEncoder().encode('solid tricky'));expect(analyze(parseSTL(b)).triangles).toBe(4);});
+ test('ASCII scientific notation and unit scaling',()=>{const text='solid triangle\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1e0 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid triangle';const m=parseSTL(new TextEncoder().encode(text).buffer,25.4);expect(analyze(m).dimensions).toEqual([25.4,25.4,0]);});
+ test('incomplete ASCII is rejected, not partially imported',()=>{expect(()=>parseSTL(new TextEncoder().encode('solid bad\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nendloop\nendfacet\nendsolid bad').buffer)).toThrow();});
+ test('truncated binary and empty STL rejected',()=>{expect(()=>parseSTL(exportSTL(tetra).slice(0,-1))).toThrow();expect(()=>parseSTL(new ArrayBuffer(0))).toThrow();});
+ test('non-finite binary coordinate rejected',()=>{const b=exportSTL(tetra);new DataView(b).setFloat32(96,NaN,true);expect(()=>parseSTL(b)).toThrow();});
+ test('size limit is enforced before parsing',()=>{expect(()=>parseSTL(new ArrayBuffer(MAX_BYTES+1))).toThrow('30 MiB');});
+ test('duplicate and zero-area faces are removed without moving good vertices',()=>{const m=new Float64Array([...tetra,...tetra.slice(0,9),0,0,0,0,0,0,10,0,0]);const r=repair(m);expect(r.changes.duplicateFacesRemoved).toBe(1);expect(r.changes.degenerateFacesRemoved).toBe(1);expect([...r.mesh]).toEqual([...tetra]);expect(r.report.closedTopology).toBe(true);});
+ test('a flipped triangle creates three winding conflicts and can be corrected',()=>{const m=tetra.slice();for(let j=0;j<3;j++)[m[3+j],m[6+j]]=[m[6+j],m[3+j]];expect(analyze(m).windingConflicts).toBe(3);expect(repair(m).report.windingConflicts).toBe(0);expect(repair(m).report.inwardShells).toBe(0);});
+ test('an inward isolated shell becomes outward',()=>{const m=tetra.slice();for(let i=0;i<m.length;i+=9)for(let j=0;j<3;j++)[m[i+3+j],m[i+6+j]]=[m[i+6+j],m[i+3+j]];expect(analyze(m).inwardShells).toBe(1);expect(repair(m).report.inwardShells).toBe(0);});
+ test('repair sample has a known missing 10 by 8 mm patch',()=>{const r=analyze(demoMesh());expect(r.triangles).toBe(19);expect(r.boundaryEdges).toBe(4);expect(r.duplicateFaces).toBe(1);expect(r.windingConflicts).toBe(3);expect(r.dimensions).toEqual([30,24,24]);});
+ test('holes remain open unless explicitly requested',()=>{const r=repair(demoMesh());expect(r.changes.holesFilled).toBe(0);expect(r.report.boundaryEdges).toBe(4);});
+ test('planar sample hole filled within chosen span, then reimported closed',()=>{const r=repair(demoMesh(),true,20);expect(r.changes.holesFilled).toBe(1);expect(r.changes.trianglesAdded).toBe(2);expect(r.report.triangles).toBe(20);expect(r.report.closedTopology).toBe(true);expect(analyze(parseSTL(exportSTL(r.mesh))).closedTopology).toBe(true);});
+ test('small span keeps larger gap open',()=>{expect(repair(demoMesh(),true,5).report.boundaryEdges).toBe(4);});
+ test('a flat triangle is not doubled to fake a solid',()=>{const r=repair(tetra.slice(0,9),true,100);expect(r.changes.holesFilled).toBe(0);expect(r.report.closedTopology).toBe(false);});
+ test('nonplanar hole is left for manual review',()=>{const m=demoMesh();for(let i=0;i<m.length;i+=3)if(m[i]===10&&m[i+1]===8&&m[i+2]===24)m[i+2]=27;expect(repair(m,true,40).changes.holesFilled).toBe(0);});
+ test('bow-tie vertex is detected even when every edge has two faces',()=>{const other=tetra.map(v=>-v);const m=new Float64Array([...tetra,...other]);const r=analyze(m);expect(r.nonManifoldEdges).toBe(0);expect(r.nonManifoldVertices).toBe(1);expect(r.closedTopology).toBe(false);});
+ test('three faces sharing one edge remain reported and are not silently split',()=>{const m=new Float64Array([0,0,0,10,0,0,0,10,0,10,0,0,0,0,0,0,0,10,0,0,0,10,0,0,0,-10,0]);expect(analyze(m).nonManifoldEdges).toBe(1);expect(repair(m,true,20).report.nonManifoldEdges).toBe(1);});
+ test('all-degenerate mesh does not produce an empty successful STL',()=>{expect(()=>repair(new Float64Array(9))).toThrow('No usable');});
+ test('near-coincident points are not tolerance-welded',()=>{const m=tetra.slice();m[0]=0.000001;expect(analyze(m).boundaryEdges).toBeGreaterThan(0);expect(repair(m).report.boundaryEdges).toBeGreaterThan(0);});
+ test('repeated repair is idempotent',()=>{const first=repair(demoMesh(),true,20),second=repair(first.mesh,true,20);expect([...second.mesh]).toEqual([...first.mesh]);expect(second.changes.holesFilled).toBe(0);});
+ test('export refuses float32 precision that collapses distant small geometry',()=>{const m=tetra.map(v=>v/10+100_000_000);expect(analyze(m).closedTopology).toBe(true);expect(()=>checkedExportSTL(m)).toThrow('precision');expect(checkedExportSTL(tetra).byteLength).toBe(284);});
+});

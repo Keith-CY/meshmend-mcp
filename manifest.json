@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "meshmend-mcp",
+  "display_name": "MeshMend",
+  "version": "0.1.0",
+  "description": "Check and repair STL and 3MF meshes for 3D printing, on your own computer: holes, flipped faces, inside-out shells.",
+  "long_description": "MeshMend finds what makes a 3D-printing mesh fail (open edges and holes, flipped faces, inside-out shells, non-manifold edges and vertices, duplicate or zero-area triangles) and writes a repaired copy as a binary STL in millimetres. It also turns 3MF files into STL with their build transforms and units applied.\n\nThe repair is deliberately conservative: it never welds nearby vertices, never splits non-manifold geometry and only caps flat holes within the span you allow; check_mesh does a trial repair first, so it can tell you honestly whether repair_mesh will fix the file. Self-intersections, wall thickness and supports are not checked.\n\nEverything runs locally with the same code as https://mesh-mend.pages.dev/. Files are never uploaded, the original is never overwritten, and the server makes no network requests.",
+  "author": {
+    "name": "CHEN (MeshMend)",
+    "url": "https://mesh-mend.pages.dev/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Keith-CY/meshmend-mcp"
+  },
+  "homepage": "https://mesh-mend.pages.dev/",
+  "documentation": "https://github.com/Keith-CY/meshmend-mcp#readme",
+  "support": "https://github.com/Keith-CY/meshmend-mcp/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/meshmend-mcp.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/meshmend-mcp.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "check_mesh",
+      "description": "Check an STL or 3MF file for holes, flipped faces, inside-out shells, non-manifold geometry and duplicate faces, with a verdict from a trial repair."
+    },
+    {
+      "name": "repair_mesh",
+      "description": "Write a repaired binary STL: remove duplicate and zero-area faces, fix face orientation, turn inside-out shells outward and optionally cap flat holes."
+    },
+    {
+      "name": "convert_3mf_to_stl",
+      "description": "Convert a 3MF (all build items or one) to a binary STL in millimetres without changing the geometry."
+    }
+  ],
+  "tools_generated": false,
+  "keywords": [
+    "stl",
+    "3mf",
+    "3d-printing",
+    "mesh-repair",
+    "watertight",
+    "manifold",
+    "slicer"
+  ],
+  "license": "MIT",
+  "privacy_policies": [
+    "https://github.com/Keith-CY/meshmend-mcp#privacy"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

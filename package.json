@@ -1,0 +1,60 @@
+{
+  "name": "meshmend-mcp",
+  "version": "0.1.0",
+  "description": "Check and repair STL and 3MF meshes on your own computer from any MCP client: holes, flipped faces, inside-out shells, non-manifold edges.",
+  "mcpName": "io.github.Keith-CY/meshmend-mcp",
+  "type": "module",
+  "bin": {
+    "meshmend-mcp": "dist/meshmend-mcp.js"
+  },
+  "files": [
+    "dist/meshmend-mcp.js",
+    "manifest.json",
+    "assets/icon.png",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && bun test",
+    "pack:mcpb": "node scripts/pack-mcpb.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "stl",
+    "3mf",
+    "3d-printing",
+    "mesh-repair",
+    "watertight",
+    "manifold"
+  ],
+  "author": "CHEN (MeshMend, https://mesh-mend.pages.dev/)",
+  "license": "MIT",
+  "homepage": "https://mesh-mend.pages.dev/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Keith-CY/meshmend-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Keith-CY/meshmend-mcp/issues"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/bun": "1.1.8",
+    "@types/earcut": "3.0.0",
+    "@types/node": "22.20.5",
+    "earcut": "3.0.2",
+    "esbuild": "0.28.2",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
+    "typescript": "5.9.3",
+    "zod": "4.1.12"
+  }
+}

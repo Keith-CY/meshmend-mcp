@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "meshmend": {
+      "command": "node",
+      "args": ["/absolute/path/to/meshmend-mcp/dist/meshmend-mcp.js"]
+    }
+  }
+}

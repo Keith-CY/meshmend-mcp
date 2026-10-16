@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Keith-CY/meshmend-mcp",
+  "title": "MeshMend",
+  "description": "Check and repair STL and 3MF meshes on your own computer: holes, flipped faces, inside-out shells.",
+  "version": "0.1.0",
+  "websiteUrl": "https://mesh-mend.pages.dev/",
+  "repository": {
+    "url": "https://github.com/Keith-CY/meshmend-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/Keith-CY/meshmend-mcp/main/assets/icon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Keith-CY/meshmend-mcp/releases/download/v0.1.0/meshmend-mcp-0.1.0.mcpb",
+      "version": "0.1.0",
+      "fileSha256": "e30f83cccfb15ddded841cd717f2de72d9dd929754d53eddd5098b4ebcbf6c2f",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

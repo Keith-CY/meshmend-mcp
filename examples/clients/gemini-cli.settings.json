@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "meshmend": {
+      "command": "npx",
+      "args": ["-y", "github:Keith-CY/meshmend-mcp"]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+import { describe,test,expect } from 'bun:test';
+import { zipSync,strToU8 } from 'fflate';
+import { parse3MF,demo3MF,combineItems } from '../src/core/three-mf';
+import { analyze,exportSTL,parseSTL } from '../src/core/mesh';
+const core='http://schemas.microsoft.com/3dmanufacturing/core/2015/02';
+const prod='http://schemas.microsoft.com/3dmanufacturing/production/2015/06';
+const rel='http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel';
+export const simpleObject='<object id="1" name="Part"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object>';
+export const model=(objects=simpleObject,build='<item objectid="1"/>',attrs='')=>`<model xmlns="${core}" ${attrs}><resources>${objects}</resources><build>${build}</build></model>`;
+export function archive(text:string,extras:Record<string,string>={}){const data:Record<string,Uint8Array>={'_rels/.rels':strToU8(`<Relationships><Relationship Id="r0" Type="${rel}" Target="/3D/main.model"/></Relationships>`),'3D/main.model':strToU8(text)};for(const [k,v] of Object.entries(extras))data[k]=strToU8(v);const b=zipSync(data);return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength) as ArrayBuffer;}
+describe('3MF geometry and compatibility',()=>{
+ test('inch calibration exports 25.4 mm coordinates and closed tetrahedron',()=>{const p=parse3MF(demo3MF()),m=combineItems(p.items);expect(p.unit).toBe('inch');expect(analyze(m).dimensions).toEqual([25.4,25.4,25.4]);expect(analyze(parseSTL(exportSTL(m))).closedTopology).toBe(true);});
+ test('build transform translation is scaled from inches exactly once',()=>{const m=parse3MF(archive(model(undefined,'<item objectid="1" transform="1 0 0 0 1 0 0 0 1 2 0 0"/>','unit="inch"'))).items[0].mesh;expect(m[0]).toBeCloseTo(50.8);expect(m[3]).toBeCloseTo(76.2);});
+ test('nested component transforms apply inner scale before parent translation',()=>{const assembly='<object id="2"><components><component objectid="1" transform="2 0 0 0 2 0 0 0 2 0 0 0"/></components></object>';const m=parse3MF(archive(model(simpleObject+assembly,'<item objectid="2" transform="1 0 0 0 1 0 0 0 1 5 0 0"/>'))).items[0].mesh;expect(m[0]).toBe(5);expect(m[3]).toBe(7);});
+ test('unused resources are not accidentally exported',()=>{const p=parse3MF(archive(model(simpleObject+simpleObject.replace('id="1"','id="2"'))));expect(p.items.length).toBe(1);expect(p.items[0].mesh.length).toBe(9);});
+ test('two build instances preserve separation and independent selection',()=>{const p=parse3MF(archive(model(undefined,'<item objectid="1"/><item objectid="1" transform="1 0 0 0 1 0 0 0 1 5 0 0"/>')));expect(p.items.length).toBe(2);expect(analyze(combineItems(p.items)).dimensions).toEqual([6,1,0]);expect(analyze(p.items[0].mesh).dimensions).toEqual([1,1,0]);});
+ test('mirrored transform reverses winding to preserve signed volume',()=>{const m=parse3MF(archive(model(undefined,'<item objectid="1" transform="-1 0 0 0 1 0 0 0 1 0 0 0"/>'))).items[0].mesh;expect([...m]).toEqual([0,0,0,0,1,0,-1,0,0]);});
+ test('production-extension part paths resolve from package root',()=>{const main=model('<object id="2"><components><component objectid="1" p:path="/3D/Objects/part.model"/></components></object>','<item objectid="2"/>',`xmlns:p="${prod}" requiredextensions="p"`);const p=parse3MF(archive(main,{'3D/Objects/part.model':model()}));expect(p.items[0].mesh.length).toBe(9);});
+ test('missing referenced part produces an explicit error',()=>{const main=model('','<item objectid="1" p:path="/3D/missing.model"/>',`xmlns:p="${prod}"`);expect(()=>parse3MF(archive(main))).toThrow('missing');});
+ test('mixed-unit model parts are refused rather than silently rescaled',()=>{const main=model('','<item objectid="1" p:path="/3D/part.model"/>',`xmlns:p="${prod}"`);expect(()=>parse3MF(archive(main,{'3D/part.model':model(undefined,undefined,'unit="inch"')}))).toThrow('Mixed units');});
+ test('non-printable build items are excluded with a warning',()=>{const p=parse3MF(archive(model(undefined,'<item objectid="1"/><item objectid="1" printable="0"/>')));expect(p.items.length).toBe(1);expect(p.warnings.join(' ')).toContain('excluded');});
+ test('unknown required extensions fail instead of omitting geometry',()=>{expect(()=>parse3MF(archive(model(undefined,undefined,'xmlns:b="urn:beam" requiredextensions="b"')))).toThrow('Required 3MF extension');});
+ test('no build rejects sliced-only package',()=>{expect(()=>parse3MF(archive(model(undefined,'')))).toThrow('no build geometry');});
+ test('circular references rejected',()=>{expect(()=>parse3MF(archive(model('<object id="1"><components><component objectid="1"/></components></object>')))).toThrow('circular');});
+ test('invalid indices and missing coordinates rejected',()=>{expect(()=>parse3MF(archive(model(simpleObject.replace('v3="2"','v3="999"'))))).toThrow('invalid vertex');expect(()=>parse3MF(archive(model(simpleObject.replace('x="1"',''))))).toThrow('coordinate');});
+ test('external references and doctypes rejected',()=>{expect(()=>parse3MF(archive('<!DOCTYPE model [<!ENTITY x SYSTEM "file:///etc/passwd">]>'+model()))).toThrow('entities');expect(()=>parse3MF(archive(model('','<item objectid="1" p:path="https://example.com/part"/>',`xmlns:p="${prod}"`)))).toThrow();});
+ test('singular transforms are refused',()=>{expect(()=>parse3MF(archive(model(undefined,'<item objectid="1" transform="0 0 0 0 0 0 0 0 0 0 0 0"/>')))).toThrow('collapses');});
+ test('model size expansion bounded before creating giant output',()=>{const items=Array.from({length:257},()=>'<item objectid="1"/>').join('');expect(()=>parse3MF(archive(model(undefined,items)))).toThrow('256');});
+ test('truncated archive directory is rejected even if model data is readable',()=>{expect(()=>parse3MF(demo3MF().slice(0,-22))).toThrow('truncated');});
+ test('CRC mismatch is rejected',()=>{const b=demo3MF(),v=new DataView(b);for(let i=0;i<b.byteLength-46;i++)if(v.getUint32(i,true)===0x02014b50){v.setUint32(i+16,v.getUint32(i+16,true)^1,true);break;}expect(()=>parse3MF(b)).toThrow('checksum');});
+});
