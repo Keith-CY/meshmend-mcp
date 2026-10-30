@@ -14,7 +14,7 @@
 npx -y github:Keith-CY/meshmend-mcp
 ```
 
-> **状态：** 0.1.0 版。npm 发布还在等待；在那之前，`npx -y github:Keith-CY/meshmend-mcp`（需要 Node.js 18 以上和 git）运行的是同一份构建。Claude Desktop 用户可以从 [Releases](https://github.com/Keith-CY/meshmend-mcp/releases) 下载一键安装包。
+> **状态：** 0.1.0 版，已发布到 npm（[`meshmend-mcp`](https://www.npmjs.com/package/meshmend-mcp)）：`npx -y meshmend-mcp`（需要 Node.js 18 以上）。`npx -y github:Keith-CY/meshmend-mcp`（另需 git）运行的是同一份构建。Claude Desktop 用户可以从 [Releases](https://github.com/Keith-CY/meshmend-mcp/releases) 下载一键安装包。
 
 ## 工具
 

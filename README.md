@@ -14,7 +14,7 @@ Ask *“is `~/prints/bracket.stl` watertight?”*, *“why does my slicer say th
 npx -y github:Keith-CY/meshmend-mcp
 ```
 
-> **Status:** version 0.1.0. Publishing to npm is pending; until then `npx -y github:Keith-CY/meshmend-mcp` (needs Node.js 18+ and git) runs the same build, and Claude Desktop users can install the one-click bundle from [Releases](https://github.com/Keith-CY/meshmend-mcp/releases).
+> **Status:** version 0.1.0, on npm as [`meshmend-mcp`](https://www.npmjs.com/package/meshmend-mcp): `npx -y meshmend-mcp` (needs Node.js 18+). `npx -y github:Keith-CY/meshmend-mcp` (also needs git) runs the same build, and Claude Desktop users can install the one-click bundle from [Releases](https://github.com/Keith-CY/meshmend-mcp/releases).
 
 ## Tools
 
